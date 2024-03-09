@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "535337751098",
+    "project_id": "barcode-products-f40fc",
+    "storage_bucket": "barcode-products-f40fc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:535337751098:android:9964a852c987aec6c45b03",
+        "android_client_info": {
+          "package_name": "com.ekabav.borcode_products"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrZJ4AJ1zmiCFAZMTQlzXb-YjTOvzWu6M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

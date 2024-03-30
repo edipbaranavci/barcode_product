@@ -12,10 +12,6 @@ class HomeCubit extends Cubit<HomeState> {
   }
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final formKey = GlobalKey<FormState>();
-  final productNameController = TextEditingController();
-  final productBarcodeController = TextEditingController();
-
   final CollectionReference productsCollection =
       FirebaseFirestore.instance.collection('products');
 
@@ -23,32 +19,18 @@ class HomeCubit extends Cubit<HomeState> {
     await getProductList();
   }
 
+  void changeProductModelList(List<ProductModel> productModelList) {
+    emit(state.copyWith(productModelList: productModelList));
+  }
+
   Future<void> getProductList() async {
     List<ProductModel> list = [];
+    emit(state.copyWith(productModelList: list, searchProductModelList: list));
     await productsCollection.get().then((value) {
       for (var element in value.docs) {
         list.add(ProductModel.fromJson(element.data() as Map<String, dynamic>));
       }
     });
     emit(state.copyWith(productModelList: list));
-  }
-
-  void searchWithBarcodeProduct(String barcodeId) {
-    productBarcodeController.text = barcodeId;
-    final oldList = state.productModelList ?? [];
-    final List<ProductModel> newList = [];
-
-    for (var element in oldList) {
-      if (element.barcode == barcodeId) {
-        newList.add(element);
-      }
-    }
-    emit(state.copyWith(searchProductModelList: newList));
-  }
-
-  void clearSearchProductModelList() {
-    emit(state.copyWith(searchProductModelList: []));
-    productBarcodeController.clear();
-    productNameController.clear();
   }
 }

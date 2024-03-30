@@ -1,13 +1,13 @@
+import 'package:barcode_products/features/home/search_product/view/search_product_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../../../../core/components/container/loading_image_network.dart';
 import '../../../../core/components/dialog/custom_dialog.dart';
 import '../../../../core/models/product/product_model.dart';
 import '../../add_product/view/add_product_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kartal/kartal.dart';
-import 'package:simple_barcode_scanner/enum.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
-import '../../../../core/components/button/custom_icon_button.dart';
-import '../../../../core/components/text_field/general_form_field.dart';
 import '../cubit/home_cubit.dart';
 
 class HomeView extends StatelessWidget {
@@ -30,68 +30,103 @@ class _HomeView extends StatelessWidget {
     final cubit = context.read<HomeCubit>();
     return Scaffold(
       key: cubit.scaffoldKey,
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton(
-            heroTag: '1',
-            onPressed: () {
-              context.route.navigateToPage(
-                const AddProductView(),
-              );
-              cubit.getProductList();
-            },
-            child: const Icon(Icons.add),
-          ),
-          context.sized.emptySizedHeightBoxLow,
-          FloatingActionButton(
-            heroTag: '2',
-            onPressed: () async {
-              final value = await context.route.navigateToPage(
-                const SimpleBarcodeScannerPage(
-                  isShowFlashIcon: true,
-                  scanType: ScanType.barcode,
-                ),
-              );
-              if (value is String) {
-                cubit.searchWithBarcodeProduct(value);
-              }
-            },
-            child: const Icon(Icons.camera_alt_rounded),
-          ),
-        ],
-      ),
+      floatingActionButton: buildFABs(context, cubit),
       body: Padding(
         padding: context.padding.low,
         child: Column(
           children: [
-            buildSearchTitle(cubit, context),
-            buildProductList(),
+            buildTitle(context),
+            buildProductList(cubit),
           ],
         ),
       ),
     );
   }
 
-  Widget buildProductList() {
-    return Expanded(
-      child: BlocBuilder<HomeCubit, HomeState>(
-        builder: (context, state) {
-          final productList = state.productModelList ?? [];
-          final searchList = state.searchProductModelList ?? [];
-          if (searchList.isNotEmpty) {
-            return buildProductListView(searchList);
-          } else {
-            if (productList.isEmpty) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            } else {
-              return buildProductListView(productList);
-            }
-          }
-        },
+  Column buildFABs(BuildContext context, HomeCubit cubit) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton(
+          heroTag: '1',
+          onPressed: () => context.route.navigateToPage(
+            SearchProductView(
+              productModelList: cubit.state.productModelList ?? [],
+            ),
+          ),
+          child: const Icon(Icons.search),
+        ),
+        context.sized.emptySizedHeightBoxLow,
+        FloatingActionButton(
+          heroTag: '2',
+          onPressed: () async {
+            await context.route
+                .navigateToPage(
+                  const AddProductView(),
+                )
+                .whenComplete(() async => await cubit.getProductList());
+          },
+          child: const Icon(Icons.add),
+        ),
+      ],
+    );
+  }
+
+  Padding buildTitle(BuildContext context) {
+    return Padding(
+      padding: context.padding.low,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            width: context.sized.width * 0.3,
+            child: const Center(
+                child: RotatedBox(quarterTurns: 3, child: Text('Ürün Adı'))),
+          ),
+          SizedBox(
+            width: context.sized.width * 0.1,
+            child: const Center(
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: Text('Kategori'),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: context.sized.width * 0.1,
+            child: const RotatedBox(
+                quarterTurns: 3, child: Center(child: Text('Adet'))),
+          ),
+          SizedBox(
+            width: context.sized.width * 0.1,
+            child: const RotatedBox(
+                quarterTurns: 3, child: Center(child: Text('Fiyat'))),
+          ),
+          context.sized.emptySizedWidthBoxLow,
+        ],
       ),
+    );
+  }
+
+  Widget buildProductList(HomeCubit cubit) {
+    return Expanded(
+      child: StreamBuilder<QuerySnapshot>(
+          stream: cubit.productsCollection.snapshots(),
+          builder:
+              (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.hasError) {
+              return const Text('Bir Sorun Var!');
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const CircularProgressIndicator();
+            } else {
+              final list = (snapshot.data!.docs.map((DocumentSnapshot e) =>
+                      ProductModel.fromJson(e.data() as Map<String, dynamic>)))
+                  .toList();
+              cubit.changeProductModelList(list);
+              return buildProductListView(list);
+            }
+          }),
     );
   }
 
@@ -135,56 +170,39 @@ class _HomeView extends StatelessWidget {
     );
   }
 
-  Future<dynamic> openProductDialog(BuildContext context, ProductModel model) {
-    return showDialog(
+  void openProductDialog(BuildContext context, ProductModel model) {
+    showDialog(
       context: context,
       builder: (context) => CustomDialog(
-          title: 'Ürün: ${model.name}',
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Ürün Adı:${model.name}'),
-              Text('Ürün Kategori:${model.category}'),
-              Text('Ürün Adet:${model.count}'),
-              Text('Ürün Fiyat: ${model.price}'),
-            ],
-          )),
-    );
-  }
-
-  Form buildSearchTitle(HomeCubit cubit, BuildContext context) {
-    return Form(
-      key: cubit.formKey,
-      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: GeneralTextFormField(
-              labelText: 'Ürün Adı',
-              controller: cubit.productNameController,
-              keyboardType: TextInputType.text,
+          Center(
+            child: LoadingImageNetwork(
+              imageURL: model.photoUrl ?? '',
+              isRounded: true,
+              width: context.sized.width * 0.5,
             ),
           ),
-          context.sized.emptySizedWidthBoxLow,
-          Expanded(
-            child: GeneralTextFormField(
-              labelText: 'Barkod',
-              controller: cubit.productBarcodeController,
-              keyboardType: TextInputType.number,
+          context.sized.emptySizedHeightBoxLow,
+          Center(
+            child: Text(
+              'Ürün Adı:${model.name}',
+              style: context.general.textTheme.headlineSmall,
+              textAlign: TextAlign.center,
             ),
           ),
-          context.sized.emptySizedWidthBoxLow,
-          CustomIconButton(
-            iconData: Icons.search,
-            toolTip: 'Ara',
-            onTap: () {},
-          ),
-          CustomIconButton(
-            toolTip: 'Temizle',
-            iconData: Icons.clear,
-            onTap: () => cubit.clearSearchProductModelList(),
-          ),
+          context.sized.emptySizedHeightBoxLow,
+          Text('Ürün Kategori:${model.category}'),
+          context.sized.emptySizedHeightBoxLow,
+          Text('Ürün Adet:${model.count}'),
+          context.sized.emptySizedHeightBoxLow,
+          Text('Ürün Fiyat: ${model.price}'),
+          context.sized.emptySizedHeightBoxLow,
+          Text('Barkod: ${model.barcode}'),
+          context.sized.emptySizedHeightBoxLow,
         ],
-      ),
+      )),
     );
   }
 }

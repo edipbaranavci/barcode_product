@@ -75,6 +75,7 @@ class _AddProductView extends StatelessWidget {
                       final value = await context.route.navigateToPage(
                         const SimpleBarcodeScannerPage(
                           isShowFlashIcon: true,
+                          cancelButtonText: 'İptal',
                           scanType: ScanType.barcode,
                         ),
                       );

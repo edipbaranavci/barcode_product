@@ -13,11 +13,11 @@ class FirebaseImageService {
       File file, String barcode) async {
     await _existFile(barcode);
     final metadata = SettableMetadata(contentType: "image/jpeg");
-    // Upload file and metadata to the path 'images/mountains.jpg'
-    final uploadTask = await _service.child('$_path$barcode.jpg').putFile(
-          file,
-          metadata,
-        );
+    final uploadTask =
+        await _service.child('$_path/$barcode/$barcode.jpg').putFile(
+              file,
+              metadata,
+            );
     final downloadUrl = await uploadTask.ref.getDownloadURL();
     if (downloadUrl.isNotEmpty) {
       return Right(downloadUrl);
